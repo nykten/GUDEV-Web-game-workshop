@@ -72,6 +72,28 @@ function createSprite(x, y, width, height, color, physicsOptions = { isStatic: f
 const [playerSprite, playerBody] = createSprite(0, 0, 1, 1, 0x1f781a);
 let canDoubleJump = false;
 
+const colors = {
+  ground: 0x000000,
+  spike: 0xff0000,
+  coin: 0xffff00,
+  goal: 0x00ff00,
+  spawn: 0x0000ff,
+};
+
+const groups = {
+  ground: 1,
+  spike: 2,
+  coin: 3,
+  goal: 4,
+};
+
+const physicsOptions = {
+  ground: { isStatic: true, group: groups["ground"] },
+  spike: { isStatic: true, group: groups["spike"] },
+  coin: { isStatic: true, group: groups["coin"], isSensor: true },
+  goal: { isStatic: true, group: groups["goal"], isSensor: true },
+};
+
 createSprite(0, 3, 8, 1, 0x1a781b, {isStatic: true, group: 1});
 
 function isOnFloor() {
@@ -98,6 +120,66 @@ window.addEventListener("keydown", (e) => {
     Matter.Body.setVelocity(playerBody, {x: playerBody.velocity.x, y: 0.5});
   }
 })
+
+const level = await fetch ("level.json");
+const leveldata = await level.json();
+
+function loadLevel(level) {
+  level.forEach((object) => {
+    if (object.type === "spawn") {
+      playerSprite.position.set(object.x, object.y);
+      Matter.Body.setPosition(playerBody, {x: object.x, y: object.y});
+      return;
+    }
+
+    const [sprite, body] = createSprite(
+      object.x,
+      object.y,
+      object.width,
+      object.height,
+      colors[object.type],
+      physicsOptions[object.type],
+      object.angle
+    );
+
+    if (object.type === "spike") {
+      Matter.Events.on(engine, "collisionStart", (event) => {
+        const pairs = event.pairs;
+
+        pairs.forEach((pair) => {
+          if(pair.bodyA === body || pair.bodyB === body) {
+            loadLevel(leveldata);
+          }
+        });
+      });
+    }
+
+    if (object.type === "goal") {
+      Matter.Events.on(engine, "collisionStart", (event) => {
+        const pairs = event.pairs;
+
+        pairs.forEach((pair) => {
+          if(pair.bodyA === body || pair.bodyB === body) {
+            loadLevel(level2);
+          }
+        });
+      });
+    }
+  });
+}
+
+function clearLevel() {
+  [...world.children].forEach((child) => {
+    if (child === playerSprite) return;
+    world.removeChild(child);
+  });
+
+  Matter.Composite.allBodies(engine.world).forEach((body) => {
+    if (body)
+  })
+}
+
+loadLevel(leveldata);
 
 function update({ deltaTime, deltaMS }) {
   // playerSprite.rotation += 0.05 * deltaTime;
