@@ -1,1 +1,2 @@
-# GUDEV-Web-game-workshop
+# GUDEV Web game workshop
+Using PIXI!
